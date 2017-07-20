@@ -126,7 +126,7 @@ public class ParallaxContainerViewController: UIViewController {
         configureBackgroundImageView()
         updateBackgroundImageViewFrame()
         configureViewControllers()
-                
+        
     }
     
     func didPressPreviousButton() {
