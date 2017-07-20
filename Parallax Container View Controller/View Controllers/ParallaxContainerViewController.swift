@@ -126,22 +126,7 @@ public class ParallaxContainerViewController: UIViewController {
         configureBackgroundImageView()
         updateBackgroundImageViewFrame()
         configureViewControllers()
-        
-        let leftButton = UIButton()
-        leftButton.setTitleColor(.white, for: .normal)
-        leftButton.setTitle("Previous", for: .normal)
-        leftButton.addTarget(self, action: #selector(didPressPreviousButton), for: .touchUpInside)
-        view.addSubview(leftButton)
-        leftButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addConstraints([
-            NSLayoutConstraint(item: leftButton,
-                               attribute: .leading,
-                               relatedBy: .equal,
-                               toItem: view, attribute: <#T##NSLayoutAttribute#>, multiplier: <#T##CGFloat#>, constant: <#T##CGFloat#>)
-            ])
-        
-        
+                
     }
     
     func didPressPreviousButton() {
