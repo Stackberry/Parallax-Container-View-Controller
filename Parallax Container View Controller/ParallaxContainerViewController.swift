@@ -126,16 +126,6 @@ public class ParallaxContainerViewController: UIViewController {
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         updateBackgroundImageViewFrame()
-        
-        timer = Timer(fire: Date().addingTimeInterval(3), interval: 3, repeats: true, block: { (timer) in
-            var contentOffset = self.scrollView.contentOffset
-            contentOffset.x += self.view.bounds.size.width
-            contentOffset.x = min(contentOffset.x, self.scrollContentView.bounds.size.width - self.view.bounds.size.width)
-            self.scrollView.setContentOffset(contentOffset, animated: true)
-        })
-        
-        RunLoop.main.add(timer!, forMode: .defaultRunLoopMode)
-        
     }
     
     var timer: Timer?
