@@ -70,16 +70,22 @@ public class ParallaxContainerViewController: UIViewController {
         
     }
     
-    public var currentViewController: UIViewController? {
+    public var currentIndex: Int {
         
         let offset = scrollView.contentOffset.x
-        let nearestIndex = max(0, Int(round(offset / view.bounds.size.width)))
+        let currentIndex = max(0, Int(round(offset / view.bounds.size.width)))
         
-        guard viewControllers.count > nearestIndex else {
+        return currentIndex
+        
+    }
+    
+    public var currentViewController: UIViewController? {
+        
+        guard viewControllers.count > currentIndex else {
             return nil
         }
         
-        return viewControllers[nearestIndex]
+        return viewControllers[currentIndex]
 
     }
 
@@ -107,7 +113,7 @@ public class ParallaxContainerViewController: UIViewController {
     }
     
     deinit {
-        
+        scrollView.removeObserver(self, forKeyPath: #keyPath(UIScrollView.contentOffset))
     }
     
     // MARK: - view lifecycle
@@ -121,14 +127,30 @@ public class ParallaxContainerViewController: UIViewController {
         updateBackgroundImageViewFrame()
         configureViewControllers()
         
+        let leftButton = UIButton()
+        leftButton.setTitleColor(.white, for: .normal)
+        leftButton.setTitle("Previous", for: .normal)
+        leftButton.addTarget(self, action: #selector(didPressPreviousButton), for: .touchUpInside)
+        view.addSubview(leftButton)
+        leftButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addConstraints([
+            NSLayoutConstraint(item: leftButton,
+                               attribute: .leading,
+                               relatedBy: .equal,
+                               toItem: view, attribute: <#T##NSLayoutAttribute#>, multiplier: <#T##CGFloat#>, constant: <#T##CGFloat#>)
+            ])
+        
+        
     }
     
-    public override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        updateBackgroundImageViewFrame()
+    func didPressPreviousButton() {
+        scrollToPreviousPage()
     }
     
-    var timer: Timer?
+    func didPressNextButton() {
+        scrollToNextPage()
+    }
     
     // MARK: - layout
     
@@ -158,7 +180,6 @@ public class ParallaxContainerViewController: UIViewController {
         scrollView.bounces = true
         scrollView.alwaysBounceVertical = false
         scrollView.alwaysBounceHorizontal = true
-        scrollView.delegate = self
         
         // layout
         
@@ -194,6 +215,10 @@ public class ParallaxContainerViewController: UIViewController {
                                multiplier: 1,
                                constant: 0)
             ])
+        
+        // kvo
+        
+        scrollView.addObserver(self, forKeyPath: #keyPath(UIScrollView.contentOffset), options: [], context: nil)
         
     }
     
@@ -398,7 +423,7 @@ public class ParallaxContainerViewController: UIViewController {
         
     }
     
-    func updateBackgroundImageViewFrame() {
+    private func updateBackgroundImageViewFrame() {
         
         // early return if no background image
         
@@ -409,7 +434,7 @@ public class ParallaxContainerViewController: UIViewController {
         
         let aspectRatio = backgroundImage.size.width / backgroundImage.size.height
         let height = view.bounds.size.height
-        let width = height * aspectRatio
+        let width = max(height * aspectRatio, view.bounds.size.width)
         
         // update frame
         
@@ -421,26 +446,33 @@ public class ParallaxContainerViewController: UIViewController {
         
     }
     
-    func updateBackgroundImageViewOffset() {
+    fileprivate func updateBackgroundImageViewOffset() {
         
         let minOffset = CGFloat(0)
-        let maxOffset = backgroundImageView.bounds.size.width - view.bounds.size.width
+        let maxOffset = max(0, backgroundImageView.bounds.size.width - view.bounds.size.width)
         let proportionalOffset = scrollView.contentOffset.x * backgroundScrollRatio
         
         backgroundImageView.frame.origin.x = -min(max(minOffset, proportionalOffset), maxOffset)
         
     }
     
-    func scrollToNearestHorizontalPage() {
+    public func scrollToPreviousPage(animated: Bool = true) {
         
-        guard let currentViewController = currentViewController,
-            let index = viewControllers.index(of: currentViewController) else {
-                scrollView.setContentOffset(CGPoint.zero, animated: true)
-                return
-        }
+        var contentOffset = scrollView.contentOffset
+        contentOffset.x = view.bounds.size.width * CGFloat(max(0, currentIndex - 1))
+        scrollView.setContentOffset(contentOffset, animated: animated)
         
-        scrollView.contentOffset.x = view.bounds.size.width * CGFloat(index)
-        updateBackgroundImageViewOffset()
+    }
+    
+    public func scrollToNearestHorizontalPage() {
+        scrollView.contentOffset.x = view.bounds.size.width * CGFloat(currentIndex)
+    }
+    
+    public func scrollToNextPage(animated: Bool = true) {
+        
+        var contentOffset = scrollView.contentOffset
+        contentOffset.x = view.bounds.size.width * CGFloat(min(viewControllers.count-1, currentIndex + 1))
+        scrollView.setContentOffset(contentOffset, animated: animated)
         
     }
     
@@ -448,35 +480,32 @@ public class ParallaxContainerViewController: UIViewController {
     
     // MARK: - notification handlers
     
-}
-
-extension ParallaxContainerViewController: UIScrollViewDelegate {
+    // MARK: - kvo
     
-    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+    override public func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         
-        switch scrollView {
-        case self.scrollView:
+        guard let scrollView = object as? UIScrollView,
+            scrollView == self.scrollView,
+            keyPath == #keyPath(UIScrollView.contentOffset) else {
+                return
+        }
+        
+        // update background image
+        
+        updateBackgroundImageViewOffset()
+        
+        // forward offset to view controllers and delegate
+        
+        delegate?.parallaxContainerViewControllerDidScroll(offset: scrollView.contentOffset)
+        
+        for viewController in viewControllers {
             
-            // update background image
-            
-            updateBackgroundImageViewOffset()
-            
-            // forward offset to view controllers and delegate
-            
-            delegate?.parallaxContainerViewControllerDidScroll(offset: scrollView.contentOffset)
-            
-            for viewController in viewControllers {
-                
-                guard let viewController = viewController as? ParallaxContainerViewControllerDelegate else {
-                    continue
-                }
-                
-                viewController.parallaxContainerViewControllerDidScroll(offset: scrollView.contentOffset)
-                
+            guard let viewController = viewController as? ParallaxContainerViewControllerDelegate else {
+                continue
             }
             
-        default:
-            break
+            viewController.parallaxContainerViewControllerDidScroll(offset: scrollView.contentOffset)
+            
         }
         
     }
