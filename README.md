@@ -10,3 +10,8 @@ Hope you enjoy! It supports landscape. I imagine you'll want to customize the be
 Would love your feedback! We want to make sure that here at Stackberry our coding style and APIs suit the majority of developers. If anything clashes with your style let us know!
 
 Stay tuned for more open source releases, and if you haven't already, check out our Mobile-Backend-as-a-Service at [stackberry.io](https://stackberry.io)
+
+<br><br><br>
+## Future Improvements
+
+Embed View Controllers in Collection View Cells, managing their view lifecycles so that all view controllers are not in the hierarchy at once
